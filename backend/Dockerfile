@@ -8,8 +8,21 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
-# Copy the already built JAR file
-COPY target/smart-library-backend-1.0.0.jar app.jar
+# Copy Maven wrapper and pom.xml first for better caching
+COPY .mvn .mvn
+COPY mvnw pom.xml ./
+
+# Make Maven wrapper executable
+RUN chmod +x ./mvnw
+
+# Download dependencies (this layer will be cached if pom.xml doesn't change)
+RUN ./mvnw dependency:go-offline -B
+
+# Copy source code
+COPY src ./src
+
+# Build application
+RUN ./mvnw clean package -DskipTests -B
 
 # Expose port
 EXPOSE 8080
@@ -18,4 +31,4 @@ EXPOSE 8080
 ENV SPRING_PROFILES_ACTIVE=prod
 
 # Run application
-CMD ["java", "-Dserver.port=${PORT:-8080}", "-Dspring.profiles.active=prod", "-jar", "app.jar"]
+CMD ["java", "-Dserver.port=${PORT:-8080}", "-Dspring.profiles.active=prod", "-jar", "target/smart-library-backend-1.0.0.jar"]
