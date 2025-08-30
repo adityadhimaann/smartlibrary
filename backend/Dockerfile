@@ -30,5 +30,5 @@ EXPOSE 8080
 # Set environment variables
 ENV SPRING_PROFILES_ACTIVE=prod
 
-# Run application
-CMD ["java", "-Dserver.port=${PORT:-8080}", "-Dspring.profiles.active=prod", "-jar", "target/smart-library-backend-1.0.0.jar"]
+# Start application
+CMD ["java", "-Dspring.profiles.active=prod", "-jar", "target/smart-library-backend-1.0.0.jar"]
