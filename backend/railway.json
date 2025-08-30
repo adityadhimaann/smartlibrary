@@ -4,7 +4,7 @@
     "builder": "DOCKERFILE"
   },
   "deploy": {
-    "startCommand": "java -Dserver.port=$PORT -Dspring.profiles.active=prod -jar target/smart-library-backend-1.0.0.jar",
+    "startCommand": "java -Dspring.profiles.active=prod -jar target/smart-library-backend-1.0.0.jar",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }
