@@ -1,0 +1,16 @@
+# Platform Configuration Override
+# This file ensures deployment platforms use backend-specific configs
+
+# For Railway
+DOCKERFILE_PATH=./backend/Dockerfile
+BUILD_CONTEXT=./backend
+
+# For Render  
+DOCKER_FILE_PATH=./backend/Dockerfile
+BUILD_CONTEXT=./backend
+
+# For Heroku
+DOCKERFILE=backend/Dockerfile
+
+# Ignore root-level startup scripts
+IGNORE_ROOT_SCRIPTS=true

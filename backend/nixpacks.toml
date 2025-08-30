@@ -1,0 +1,8 @@
+[phases.build]
+cmd = "mvn clean package -DskipTests"
+
+[phases.start]
+cmd = "java -Dserver.port=$PORT -Dspring.profiles.active=prod -jar target/smart-library-backend-1.0.0.jar"
+
+[variables]
+JAVA_VERSION = "17"
