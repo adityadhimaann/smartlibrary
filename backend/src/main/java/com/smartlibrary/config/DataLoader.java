@@ -31,8 +31,11 @@ public class DataLoader implements CommandLineRunner {
     }
     
     private void loadSampleData() {
+        // Clear existing data to reload with new cover images
         if (bookRepository.count() > 0) {
-            return; // Data already loaded
+            ratingRepository.deleteAll();
+            bookRepository.deleteAll();
+            userRepository.deleteAll();
         }
         
         // Create sample users
@@ -69,14 +72,38 @@ public class DataLoader implements CommandLineRunner {
             new Book("The Strange Case of Dr. Jekyll and Mr. Hyde", "Robert Louis Stevenson", "978-0-14-143987-7", "Gothic Fiction", 4, 6)
         );
         
-        // Set additional properties for books
+        // Set additional properties for books with real cover images
+        String[] coverUrls = {
+            "https://covers.openlibrary.org/b/isbn/9780743273565-M.jpg", // The Great Gatsby
+            "https://covers.openlibrary.org/b/isbn/9780061120084-M.jpg", // To Kill a Mockingbird
+            "https://covers.openlibrary.org/b/isbn/9780452284234-M.jpg", // 1984
+            "https://covers.openlibrary.org/b/isbn/9780141439518-M.jpg", // Pride and Prejudice
+            "https://covers.openlibrary.org/b/isbn/9780316769488-M.jpg", // The Catcher in the Rye
+            "https://covers.openlibrary.org/b/isbn/9780571056866-M.jpg", // Lord of the Flies
+            "https://covers.openlibrary.org/b/isbn/9780547928227-M.jpg", // The Hobbit
+            "https://covers.openlibrary.org/b/isbn/9781451673319-M.jpg", // Fahrenheit 451
+            "https://covers.openlibrary.org/b/isbn/9780141441146-M.jpg", // Jane Eyre
+            "https://covers.openlibrary.org/b/isbn/9780062385510-M.jpg", // The Chronicles of Narnia
+            "https://covers.openlibrary.org/b/isbn/9780060850524-M.jpg", // Brave New World
+            "https://covers.openlibrary.org/b/isbn/9780547928197-M.jpg", // The Lord of the Rings
+            "https://covers.openlibrary.org/b/isbn/9780452284241-M.jpg", // Animal Farm
+            "https://covers.openlibrary.org/b/isbn/9780140177398-M.jpg", // Of Mice and Men
+            "https://covers.openlibrary.org/b/isbn/9780143039433-M.jpg", // The Grapes of Wrath
+            "https://covers.openlibrary.org/b/isbn/9780141439556-M.jpg", // Wuthering Heights
+            "https://covers.openlibrary.org/b/isbn/9780141439570-M.jpg", // The Picture of Dorian Gray
+            "https://covers.openlibrary.org/b/isbn/9780141439846-M.jpg", // Dracula
+            "https://covers.openlibrary.org/b/isbn/9780141439471-M.jpg", // Frankenstein
+            "https://covers.openlibrary.org/b/isbn/9780141439877-M.jpg"  // Dr. Jekyll and Mr. Hyde
+        };
+        
         for (int i = 0; i < books.size(); i++) {
             Book book = books.get(i);
             book.setLanguage("English");
             book.setPublicationYear(1900 + (i * 5) % 120 + 1900); // Random years between 1900-2020
             book.setPageCount(200 + (i * 50) % 400); // Random page counts between 200-600
             book.setDescription("A classic literary work that has captivated readers for generations.");
-            book.setCoverImageUrl("https://via.placeholder.com/300x400?text=" + book.getTitle().replace(" ", "+"));
+            book.setCoverImageUrl(i < coverUrls.length ? coverUrls[i] : 
+                "https://covers.openlibrary.org/b/id/8225261-M.jpg"); // Fallback cover
         }
         
         bookRepository.saveAll(books);
