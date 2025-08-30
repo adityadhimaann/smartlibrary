@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, X, Save, BookOpen } from 'lucide-react';
+import { Plus, X, Save, BookOpen, Upload, Image as ImageIcon } from 'lucide-react';
 import { Book } from '../types';
 import { createBook } from '../services/api';
 
@@ -28,6 +28,10 @@ const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose, onBookAdde
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [uploadMethod, setUploadMethod] = useState<'url' | 'file'>('url');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const categories = [
     'Fiction', 'Non-Fiction', 'Science Fiction', 'Fantasy', 'Mystery', 'Romance',
@@ -60,6 +64,53 @@ const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose, onBookAdde
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setErrors(prev => ({ ...prev, image: 'Please select a valid image file' }));
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors(prev => ({ ...prev, image: 'Image size should be less than 5MB' }));
+        return;
+      }
+
+      setSelectedImage(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+      
+      // Clear any previous errors
+      setErrors(prev => ({ ...prev, image: '' }));
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null);
+    setImagePreview('');
+    setFormData(prev => ({ ...prev, coverImageUrl: '' }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const convertImageToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -67,14 +118,23 @@ const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose, onBookAdde
 
     setIsSubmitting(true);
     try {
+      let coverImageUrl = formData.coverImageUrl;
+      
+      // If user uploaded a file, convert to base64
+      if (selectedImage && uploadMethod === 'file') {
+        coverImageUrl = await convertImageToBase64(selectedImage);
+      }
+      
       const newBook = await createBook({
         ...formData,
+        coverImageUrl,
         averageRating: 0,
         ratingCount: 0
       });
       
       onBookAdded(newBook);
       onClose();
+      // Reset form
       setFormData({
         title: '',
         author: '',
@@ -90,6 +150,9 @@ const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose, onBookAdde
         availableCopies: 1
       });
       setErrors({});
+      setSelectedImage(null);
+      setImagePreview('');
+      setUploadMethod('url');
     } catch (error) {
       console.error('Error creating book:', error);
       setErrors({ submit: 'Failed to create book. Please try again.' });
@@ -316,17 +379,119 @@ const AddBookModal: React.FC<AddBookModalProps> = ({ isOpen, onClose, onBookAdde
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Cover Image URL
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Book Cover Image
             </label>
-            <input
-              type="url"
-              name="coverImageUrl"
-              value={formData.coverImageUrl}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="https://example.com/book-cover.jpg"
-            />
+            
+            {/* Upload method selector */}
+            <div className="mb-3">
+              <div className="flex space-x-4">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="url"
+                    checked={uploadMethod === 'url'}
+                    onChange={(e) => setUploadMethod(e.target.value as 'url' | 'file')}
+                    className="mr-2"
+                  />
+                  Image URL
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="file"
+                    checked={uploadMethod === 'file'}
+                    onChange={(e) => setUploadMethod(e.target.value as 'url' | 'file')}
+                    className="mr-2"
+                  />
+                  Upload File
+                </label>
+              </div>
+            </div>
+
+            {uploadMethod === 'url' ? (
+              /* URL Input */
+              <div>
+                <input
+                  type="url"
+                  name="coverImageUrl"
+                  value={formData.coverImageUrl}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="https://example.com/book-cover.jpg"
+                />
+                {formData.coverImageUrl && (
+                  <div className="mt-2">
+                    <img 
+                      src={formData.coverImageUrl} 
+                      alt="Cover preview" 
+                      className="h-32 w-24 object-cover rounded border"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* File Upload */
+              <div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageFileSelect}
+                  className="hidden"
+                />
+                
+                {!selectedImage ? (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 transition-colors"
+                  >
+                    <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-600">
+                      Click to upload a book cover image
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      PNG, JPG up to 5MB
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex items-start space-x-4">
+                    <div className="relative">
+                      <img 
+                        src={imagePreview} 
+                        alt="Cover preview" 
+                        className="h-32 w-24 object-cover rounded border"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleRemoveImage}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-700">{selectedImage.name}</p>
+                      <p className="text-xs text-gray-500">
+                        {(selectedImage.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+                      >
+                        Change image
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                {errors.image && <p className="text-red-500 text-xs mt-1">{errors.image}</p>}
+              </div>
+            )}
           </div>
 
           <div>
